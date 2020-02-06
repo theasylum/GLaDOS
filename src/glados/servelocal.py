@@ -1,30 +1,22 @@
-from os import getenv
+"""
+Serves a local Flask application for GLaDOS bots/plugins
+"""
+
+import argparse
+import json
 import logging
 
 from flask import Flask, request
 
-from glados import (
-    Glados,
-    GladosBot,
-    GladosRequest,
-    RouteType,
-    SlackVerification,
-    GladosRouteNotFoundError,
-    read_config,
-)
-from test_plugin.test_plugin import TestPlugin
-from example import FLASK_HOST, FLASK_PORT
-import json
-
-glados_config_file = "glados_standalone/glados.yaml"
-config = read_config(glados_config_file)
+from .configs import read_config
+from .core import Glados
+from .errors import GladosRouteNotFoundError
+from .request import GladosRequest, SlackVerification
+from .route_type import RouteType
+from .router import GladosRoute
 
 app = Flask(__name__)
-
-server_config = config.config.server
-glados = Glados(config.config_file)
-
-app.secret_key = server_config.secret_key
+glados = None
 
 
 def extract_slack_info(r: request):
@@ -32,10 +24,12 @@ def extract_slack_info(r: request):
         data = r.get_data(as_text=True)
         timestamp = r.headers.get("X-Slack-Request-Timestamp")
         signature = r.headers.get("X-Slack-Signature")
+
         return SlackVerification(data, timestamp, signature)
     except Exception as e:
         # If it makes it here, the request probably isn't from Slack.
         logging.error(e)
+
         return None
 
 
@@ -44,6 +38,7 @@ def send_message_route(bot, route):
     glados_request = GladosRequest(
         RouteType.SendMessage, route, bot_name=bot, json=request.get_json()
     )
+
     return glados.request(glados_request)
 
 
@@ -51,6 +46,7 @@ def send_message_route(bot, route):
 def event_subscriptions(bot):
     body = request.json
     event_type = body.get("type", "")
+
     if event_type == "url_verification":
         return body.get("challenge")
 
@@ -74,6 +70,7 @@ def slash_command(bot, route):
     r = GladosRequest(
         RouteType.Slash, route, slack_info, bot_name=bot, json=request_json
     )
+
     return glados.request(r)
 
 
@@ -89,6 +86,7 @@ def interaction(bot):
         return glados.request(r)
     except GladosRouteNotFoundError as e:
         logging.error(e)
+
         return "not found"
 
 
@@ -98,15 +96,33 @@ def external_menu():
     request_json = request.form.to_dict()
     request_json = json.loads(request_json.get("payload"))
     r = GladosRequest(RouteType.Menu, slack_verify=slack_info, json=request_json)
+
     return glados.request(r)
 
 
-def start():
-    glados.read_config()
+parser = argparse.ArgumentParser(
+    description="Serve GLaDOS and plugins using a Flask server"
+)
+parser.add_argument(
+    "configfile",
+    type=str,
+    help="Use the provided configfile for starting the server/GLaDOS bots",
+)
 
 
 def run():
-    start()
+    global glados
+
+    args = parser.parse_args()
+    configfile = args.configfile
+
+    config = read_config(configfile)
+
+    server_config = config.config.server
+    glados = Glados(config.config_file)
+    glados.read_config()
+
+    app.secret_key = server_config.secret_key
     app.run(server_config.host, server_config.port, debug=server_config.debug)
 
 
