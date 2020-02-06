@@ -1,7 +1,4 @@
-pyramid==1.10.4
-Flask
-python-dotenv
-blinker
+glados[servelocal]
 
-# Uncomment this line if you want to use ngrok
-# pyngrok
+# Or if you want ngrok support:
+# glados[servelocal,ngrok]

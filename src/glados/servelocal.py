@@ -6,14 +6,19 @@ import argparse
 import json
 import logging
 
-from flask import Flask, request
-
 from .configs import read_config
 from .core import Glados
 from .errors import GladosRouteNotFoundError
 from .request import GladosRequest, SlackVerification
 from .route_type import RouteType
 from .router import GladosRoute
+
+try:
+    from flask import Flask, request
+except ImportError:
+    raise ImportError(
+        "Flask is not installed, please install Flask or install glados extra 'servelocal'"
+    )
 
 app = Flask(__name__)
 glados = None
