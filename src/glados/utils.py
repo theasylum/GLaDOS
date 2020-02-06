@@ -31,16 +31,8 @@ def decode_kms(ciphertext_blob: str) -> str:
 def get_enc_var(var_name: str):
     """Get an encrypted ENV VAR"""
     ciphertext_blob = get_var(var_name)
+
     return decode_kms(ciphertext_blob)
-
-
-def read_config(config_file: str):
-    from glados import GladosConfig
-
-    logging.debug(f"Reading GLaDOS config from {config_file}")
-    config = GladosConfig(config_file)
-    config.read_config()
-    return config
 
 
 class PyJSON:

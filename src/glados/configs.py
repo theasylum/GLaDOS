@@ -7,6 +7,15 @@ import yaml
 
 from .utils import PyJSON
 
+
+def read_config(config_file: str):
+    logging.debug(f"Reading GLaDOS config from {config_file}")
+    config = GladosConfig(config_file)
+    config.read_config()
+
+    return config
+
+
 class GladosConfig:
     def __init__(self, config_file: str):
         self.config = None  #  type: Union[None, PyJSON]
