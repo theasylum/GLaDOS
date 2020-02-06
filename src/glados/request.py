@@ -1,5 +1,7 @@
-from glados import RouteType, BOT_ROUTES, PyJSON
 from typing import Union
+
+from .route_type import BOT_ROUTES, RouteType
+from .utils import PyJSON
 
 
 class SlackVerification:
@@ -85,8 +87,10 @@ class GladosRequest:
 
         if route_type is RouteType.Menu:
             self._route = self.json.action_id
+
         if route_type is RouteType.Interaction:
             self._route = self.json.actions[0].action_id
+
         if route_type is RouteType.Events:
             self._route = self.json.event.type
 
@@ -96,6 +100,7 @@ class GladosRequest:
 
         If the route automatically prefixed the route with the bot name, it will return the route with the prefix
         """
+
         return (
             f"{self.bot_name}_{self._route}"
             if self.route_type in BOT_ROUTES

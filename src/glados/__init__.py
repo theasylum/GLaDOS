@@ -1,23 +1,19 @@
 import logging
-from .utils import PyJSON, get_var, get_enc_var
 
-from .route_type import RouteType, EventRoutes, BOT_ROUTES, VERIFY_ROUTES
-from .request import GladosRequest, SlackVerification
+from .bot import BotImporter, GladosBot
+from .configs import GladosConfig, read_config
+from .core import Glados
 from .errors import (
-    GladosPathExistsError,
-    GladosRouteNotFoundError,
     GladosBotNotFoundError,
     GladosError,
+    GladosPathExistsError,
+    GladosRouteNotFoundError,
 )
-
-from .bot import GladosBot, BotImporter
-from .router import GladosRouter, GladosRoute
 from .plugin import GladosPlugin, PluginImporter
-
-from .configs import GladosConfig
-from .utils import read_config
-
-from .core import Glados
+from .request import GladosRequest, SlackVerification
+from .route_type import BOT_ROUTES, VERIFY_ROUTES, EventRoutes, RouteType
+from .router import GladosRoute, GladosRouter
+from .utils import PyJSON, get_enc_var, get_var
 
 # LOGGING_FORMAT = "%(asctime)s :: %(levelname)-8s :: [%(filename)s:%(lineno)s :: %(funcName)s() ] %(message)s"
 LOGGING_FORMAT = (

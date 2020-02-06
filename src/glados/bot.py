@@ -1,14 +1,15 @@
-from slack import WebClient
-from slack.web.classes.messages import Message
-from slack.web.slack_response import SlackResponse
-from slack.errors import SlackRequestError
-import yaml
 import glob
+import logging
 from typing import Dict, Union
 
-import logging
+import yaml
+from slack import WebClient
+from slack.errors import SlackRequestError
+from slack.web.classes.messages import Message
+from slack.web.slack_response import SlackResponse
 
-from glados import GladosRequest, get_var, get_enc_var
+from .request import GladosRequest
+from .utils import get_enc_var, get_var
 
 
 class BotImporter:
@@ -27,6 +28,7 @@ class BotImporter:
         """
         files = glob.glob(f"{self._dir}/*.yaml")
         logging.debug(f"bot config files found: {files}")
+
         for f in files:
             with open(f) as file:
                 self._bots_yaml.update(yaml.load(file, Loader=yaml.FullLoader))
@@ -92,18 +94,21 @@ class GladosBot:
         Any:
             Returns the value of the var from either the passed in value, or the env var value.
         """
+
         if type(value) is dict and "env_var" in value:
             var_name = value["env_var"]
             try:
                 return get_var(var_name)
             except KeyError:
                 logging.critical(f"missing env var: {value['env_var']}")
+
         if type(value) is dict and "enc_env_var" in value:
             var_name = value["enc_env_var"]
             try:
                 return get_enc_var(var_name)
             except KeyError:
                 logging.critical(f"missing enc env var: {value['enc_env_var']}")
+
         return value
 
     def validate_slack_signature(self, request: GladosRequest):
@@ -111,6 +116,7 @@ class GladosBot:
             signing_secret=self.signing_secret, **request.slack_verify.json
         )
         logging.info(f"valid payload signature from slack: {valid}")
+
         if not valid:
             raise SlackRequestError("Signature of request is not valid")
 
@@ -128,6 +134,7 @@ class GladosBot:
         -------
 
         """
+
         return self.client.chat_postMessage(
             channel=channel, as_user=True, **message.to_dict()
         ).data
@@ -145,6 +152,7 @@ class GladosBot:
         -------
 
         """
+
         return self.client.chat_update(channel=channel, ts=ts, **message.to_dict()).data
 
     def delete_message(self, channel: str, ts: str) -> SlackResponse:
@@ -159,4 +167,5 @@ class GladosBot:
         -------
 
         """
+
         return self.client.chat_delete(channel=channel, ts=ts).data

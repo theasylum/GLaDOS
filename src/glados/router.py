@@ -1,10 +1,12 @@
 import logging
-from typing import Callable, Dict, List, NoReturn, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, NoReturn, Optional
 
-from glados import GladosRequest, GladosRouteNotFoundError, RouteType
+from .errors import GladosRouteNotFoundError
+from .request import GladosRequest
+from .route_type import RouteType
 
 if TYPE_CHECKING:
-    from glados import GladosPlugin
+    from .plugin import GladosPlugin
 
 
 class GladosRoute(object):
@@ -23,6 +25,7 @@ class GladosRouter(object):
     def __init__(self, **kwargs):
         # routes are stored as: {RouteType.SendMessage: {"ask_user",ask_user, "confirm":confirm}}
         self.routes = dict()  # type: Dict[RouteType, Dict[str, GladosRoute]]
+
         for route in RouteType._member_names_:
             self.routes[RouteType[route].value] = dict()  # type: Dict[str, GladosRoute]
 
@@ -43,6 +46,7 @@ class GladosRouter(object):
 
         """
         logging.debug(f"adding route: {route}")
+
         if route.route in self.routes[route.route_type.value]:
             raise KeyError(
                 f"a route with the name of {route.route} already exists in the route type: {route.route_type.name}"
@@ -61,6 +65,7 @@ class GladosRouter(object):
         -------
 
         """
+
         for route in plugin.routes:
             self.add_route(plugin, route)
 
@@ -84,10 +89,12 @@ class GladosRouter(object):
         GladosRouteNotFoundError
             the requested route is not found
         """
+
         if not self.routes[route_type.value].get(route):
             raise GladosRouteNotFoundError(
                 f"no route with the name of {route} exists in route type: {route_type.name}"
             )
+
         return self.routes[route_type.value][route]
 
     def route_function(self, route_type: RouteType, route: str) -> Callable:
@@ -106,6 +113,7 @@ class GladosRouter(object):
             return the requested routes callable function
 
         """
+
         return self.get_route(route_type, route)
 
     def exec_route(self, request: GladosRequest):
@@ -146,4 +154,5 @@ class GladosRouter(object):
         False
         """
         logging.debug(f"calling route function for {request.route}")
+
         return self.route_function(request.route_type, request.route)(request)

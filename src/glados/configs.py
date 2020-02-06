@@ -1,10 +1,11 @@
 import json
-import yaml
-from pathlib import Path
-from glados import PyJSON
 import logging
-from typing import Union, List
+from pathlib import Path
+from typing import List, Union
 
+import yaml
+
+from .utils import PyJSON
 
 class GladosConfig:
     def __init__(self, config_file: str):
@@ -35,12 +36,14 @@ class GladosConfig:
     @property
     def sections(self) -> List[str]:
         """what sections are there in the config file
-        
+
         Returns
         -------
         List[str]:
             sorted list of sections in the yaml file
         """
+
         if not self.config:
             return list()
+
         return sorted(list(self.config.to_dict().keys()))

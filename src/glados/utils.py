@@ -1,12 +1,12 @@
 import json
 import logging
-
 import os
 from base64 import b64decode
 
 
 def get_var(var_name: str):
     """Get an ENV VAR"""
+
     return os.environ[var_name]
 
 
@@ -52,11 +52,14 @@ class PyJSON:
 
     def from_dict(self, d):
         self.__dict__ = {}
+
         for key, value in d.items():
             if type(value) is dict:
                 value = PyJSON(value)
+
             if type(value) is list:
                 value_list = list()
+
                 for v in value:
                     if type(v) in [list, dict]:
                         value_list.append(PyJSON(v))
@@ -67,10 +70,12 @@ class PyJSON:
 
     def to_dict(self):
         d = {}
+
         for key, value in self.__dict__.items():
             if type(value) is PyJSON:
                 value = value.to_dict()
             d[key] = value
+
         return d
 
     def __repr__(self):

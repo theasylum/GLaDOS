@@ -1,28 +1,19 @@
-from typing import Callable, Dict, Union
-import yaml
 import glob
-import logging
-import requests
-
-from pathlib import Path
-
 import importlib
+import logging
+from pathlib import Path
+from typing import Callable, Dict, Union
 
-from glados import (
-    GladosBot,
-    RouteType,
-    GladosRoute,
-    BOT_ROUTES,
-    GladosPathExistsError,
-    GladosBotNotFoundError,
-    GladosError,
-    GladosRequest,
-    VERIFY_ROUTES,
-    EventRoutes,
-)
-
+import requests
+import yaml
 from slack.web.classes.messages import Message
-from slack.web.classes.objects import MarkdownTextObject, TextObject, PlainTextObject
+from slack.web.classes.objects import MarkdownTextObject, PlainTextObject, TextObject
+
+from .bot import GladosBot
+from .errors import GladosBotNotFoundError, GladosError, GladosPathExistsError
+from .request import GladosRequest
+from .route_type import BOT_ROUTES, VERIFY_ROUTES, EventRoutes, RouteType
+from .router import GladosRoute
 
 SLACK_MESSAGE_TYPES = [Message, MarkdownTextObject, TextObject, PlainTextObject]
 
@@ -72,6 +63,7 @@ class PluginConfig:
         """
         config = config.__dict__.copy()
         self_config = self.__dict__
+
         if use_base_module:
             self_config.pop("module")
             self_config.pop("package")
@@ -80,8 +72,10 @@ class PluginConfig:
 
     def to_dict(self, user_config_only=True):
         config = dict(enabled=self.enabled, bot=self.bot.to_dict())
+
         if not user_config_only:
             config["module"] = self.module
+
         return {self.name: config}
 
     def to_yaml(self, user_config_only=True):
@@ -113,15 +107,18 @@ class PluginImporter:
         plugin_user_config = None
 
         logging.debug("starting import of plugins")
+
         for config_file in self.config_files:
             # Read the plugin package config
             plugin_name = None
             with open(config_file) as file:
                 c = yaml.load(file, yaml.FullLoader)
+
                 if len(c.keys()) != 1:
                     logging.critical(
                         f"zero or more than one object in config file: {config_file}"
                     )
+
                     continue
                 plugin_name = list(c.keys())[0]
                 c[plugin_name]["config_file"] = config_file
@@ -131,11 +128,13 @@ class PluginImporter:
                 logging.critical(
                     f"invalid or missing plugin name. config file: {config_file}"
                 )
+
                 continue
 
             user_config_path = Path(self.plugins_config_folder, f"{plugin_name}.yaml")
 
             # Write defaults to user file
+
             if not user_config_path.is_file() and write_to_user_config:
                 with open(user_config_path, "w") as file:
                     plugin_package_config.enabled = False
@@ -143,14 +142,17 @@ class PluginImporter:
 
             elif not user_config_path.is_file() and not write_to_user_config:
                 logging.warning(f"no user plugin config for {plugin_name}. skipping.")
+
                 continue
 
             with open(user_config_path) as file:
                 c = yaml.load(file, yaml.FullLoader)
+
                 if len(c.keys()) != 1:
                     logging.critical(
                         f"zero or more than one object in config file: {config_file}"
                     )
+
                     continue
                 c[plugin_name]["config_file"] = str(user_config_path)
                 plugin_user_config = PluginConfig(plugin_name, **c[plugin_name])
@@ -172,9 +174,11 @@ class PluginImporter:
             the results are updated in self.plugins
 
         """
+
         for plugin_name, plugin_config in self.plugin_configs.items():
             if not plugin_config.enabled:
                 logging.warning(f"plugin {plugin_name} is disabled")
+
                 continue
             logging.info(f"importing plugin: {plugin_name}")
             module = importlib.import_module(plugin_config.package)
@@ -187,6 +191,7 @@ class PluginImporter:
                 if not bot_name:
                     raise GladosError(f"no bot name set for plugin: {plugin_name}")
                 bot = bots.get(bot_name)
+
                 if not bot:
                     logging.error(
                         f"bot: {bot_name} is not found. disabling plugin: {plugin_name}"
@@ -194,6 +199,7 @@ class PluginImporter:
                     raise GladosBotNotFoundError(
                         f"bot: {bot_name} is not found as required for {plugin_name}"
                     )
+
                 return bot
 
             try:
@@ -201,6 +207,7 @@ class PluginImporter:
             except GladosError as e:
                 logging.error(f"{e} :: disabling plugin: {plugin_name}")
                 self.plugin_configs[plugin_name]["enabled"] = False
+
                 continue
 
             plugin = getattr(module, plugin_config.module)(bot, plugin_name)
@@ -247,11 +254,14 @@ class GladosPlugin:
         -------
 
         """
+
         if type(route) is EventRoutes:
             route = route.name
         new_route = GladosRoute(route_type, route, function)
+
         if route_type in BOT_ROUTES:
             new_route.route = f"{self.bot.name}_{route}"
+
         if new_route.route in self._routes[new_route.route_type.value]:
             raise GladosPathExistsError(
                 f"a route with the name of {new_route.route} already exists in the route type: {new_route.route_type.name}"
@@ -274,20 +284,25 @@ class GladosPlugin:
         -------
 
         """
+
         if request.route_type in VERIFY_ROUTES:
             self.bot.validate_slack_signature(request)
         response = self._routes[request.route_type.value][request.route].function(
             request, **kwargs
         )
+
         if response is None:
             # TODO(zpriddy): add logging.
+
             return ""
 
         if request.route_type is RouteType.Interaction and request.response_url:
             if type(response) is str:
                 self.respond_to_url(request, response)
+
             if type(response) in SLACK_MESSAGE_TYPES:
                 response = response.to_dict()
+
             if type(response) is dict:
                 self.respond_to_url(request, **response)
 
@@ -296,6 +311,7 @@ class GladosPlugin:
     def respond_to_url(self, request: GladosRequest, text: str, **kwargs):
         if not request.response_url:
             logging.error("no response_url provided in request.")
+
             return
         kwargs["text"] = text
         r = requests.post(request.response_url, json=kwargs)
@@ -317,4 +333,5 @@ class GladosPlugin:
                 for route in [route_type for route_type in self._routes.values()]
             ]
         ]
+
         return routes

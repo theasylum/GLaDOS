@@ -1,19 +1,13 @@
-from typing import List, Dict, TYPE_CHECKING
-import yaml
 import logging
+from typing import Dict, List
 
-from glados import (
-    GladosPlugin,
-    GladosRequest,
-    GladosRouter,
-    GladosBot,
-    BotImporter,
-    PluginImporter,
-    read_config,
-)
+import yaml
 
-if TYPE_CHECKING:
-    from glados import GladosConfig
+from .bot import BotImporter, GladosBot
+from .configs import GladosConfig, read_config
+from .plugin import GladosPlugin, PluginImporter
+from .request import GladosRequest
+from .router import GladosRouter
 
 
 class Glados:
@@ -40,6 +34,7 @@ class Glados:
 
     def read_config(self):
         # TODO: Fix logging setup
+
         if not self.config_file:
             logging.info("glados config file not set.")
 
@@ -63,11 +58,13 @@ class Glados:
         self.bots_config_dir = config.get("bots_config_folder")
 
         import_bots = config.get("import_bots")
+
         if import_bots:
             logging.info("auto-importing bots as set in glados config file")
             self.import_bots()
 
         import_plugins = config.get("import_plugins", True)
+
         if import_plugins:
             self.import_plugins()
 
@@ -86,6 +83,7 @@ class Glados:
         importer.discover_plugins()
         importer.load_discovered_plugins_config(False)
         importer.import_discovered_plugins(self.bots)
+
         for plugin in importer.plugins.values():
             print(type(plugin))
             self.add_plugin(plugin)
@@ -133,4 +131,5 @@ class Glados:
         -------
 
         """
+
         return self.router.exec_route(request)
